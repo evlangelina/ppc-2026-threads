@@ -45,24 +45,29 @@ bool BortsovaAIntegralsRectangleOMP::PreProcessingImpl() {
 
 bool BortsovaAIntegralsRectangleOMP::RunImpl() {
   double sum = 0.0;
+  const int dims = dims_;
+  const int num_steps = num_steps_;
+  const int64_t total_points = total_points_;
+  const auto &midpoints = midpoints_;
+  const auto &func = func_;
 
-#pragma omp parallel
+#pragma omp parallel default(none) shared(sum, dims, num_steps, total_points, midpoints, func)
   {
-    std::vector<int> indices(dims_, 0);
-    std::vector<double> point(dims_, 0.0);
+    std::vector<int> indices(dims, 0);
+    std::vector<double> point(dims, 0.0);
 
 #pragma omp for reduction(+ : sum)
-    for (int64_t pt = 0; pt < total_points_; pt++) {
+    for (int64_t pt = 0; pt < total_points; pt++) {
       int64_t tmp = pt;
-      for (int di = dims_ - 1; di >= 0; di--) {
-        indices[di] = static_cast<int>(tmp % num_steps_);
-        tmp /= num_steps_;
+      for (int di = dims - 1; di >= 0; di--) {
+        indices[di] = static_cast<int>(tmp % num_steps);
+        tmp /= num_steps;
       }
 
-      for (int di = 0; di < dims_; di++) {
-        point[di] = midpoints_[di][indices[di]];
+      for (int di = 0; di < dims; di++) {
+        point[di] = midpoints[di][indices[di]];
       }
-      sum += func_(point);
+      sum += func(point);
     }
   }
 
