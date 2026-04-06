@@ -1,6 +1,7 @@
 #include "bortsova_a_integrals_rectangle/tbb/include/ops_tbb.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include "bortsova_a_integrals_rectangle/common/include/common.hpp"
