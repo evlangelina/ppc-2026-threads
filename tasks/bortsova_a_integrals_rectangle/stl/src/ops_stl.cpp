@@ -1,5 +1,6 @@
 #include "bortsova_a_integrals_rectangle/stl/include/ops_stl.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <thread>
 #include <vector>
@@ -45,6 +46,34 @@ bool BortsovaAIntegralsRectangleSTL::PreProcessingImpl() {
   return true;
 }
 
+double BortsovaAIntegralsRectangleSTL::ComputePartialSum(int64_t begin, int64_t end) {
+  std::vector<int> indices(dims_, 0);
+  std::vector<double> point(dims_);
+
+  int64_t temp = begin;
+  for (int di = dims_ - 1; di >= 0; di--) {
+    indices[di] = static_cast<int>(temp % num_steps_);
+    temp /= num_steps_;
+  }
+
+  double local_sum = 0.0;
+  for (int64_t pt = begin; pt < end; pt++) {
+    for (int di = 0; di < dims_; di++) {
+      point[di] = midpoints_[di][indices[di]];
+    }
+    local_sum += func_(point);
+
+    for (int di = dims_ - 1; di >= 0; di--) {
+      indices[di]++;
+      if (indices[di] < num_steps_) {
+        break;
+      }
+      indices[di] = 0;
+    }
+  }
+  return local_sum;
+}
+
 bool BortsovaAIntegralsRectangleSTL::RunImpl() {
   int num_threads = ppc::util::GetNumThreads();
   std::vector<double> partial_sums(num_threads, 0.0);
@@ -52,49 +81,19 @@ bool BortsovaAIntegralsRectangleSTL::RunImpl() {
   int64_t chunk = total_points_ / num_threads;
   int64_t remainder = total_points_ % num_threads;
 
-  auto worker = [&](int tid, int64_t b, int64_t e) {
-    std::vector<int> indices(dims_, 0);
-    std::vector<double> point(dims_);
-
-    int64_t temp = b;
-    for (int di = dims_ - 1; di >= 0; di--) {
-      indices[di] = static_cast<int>(temp % num_steps_);
-      temp /= num_steps_;
-    }
-
-    double local_sum = 0.0;
-    for (int64_t pt = b; pt < e; pt++) {
-      for (int di = 0; di < dims_; di++) {
-        point[di] = midpoints_[di][indices[di]];
-      }
-      local_sum += func_(point);
-
-      for (int di = dims_ - 1; di >= 0; di--) {
-        indices[di]++;
-        if (indices[di] < num_steps_) {
-          break;
-        }
-        indices[di] = 0;
-      }
-    }
-    partial_sums[tid] = local_sum;
-  };
-
   std::vector<std::thread> threads(num_threads - 1);
-  for (int t = 1; t < num_threads; t++) {
-    int64_t begin = (t * chunk) + std::min(static_cast<int64_t>(t), remainder);
-    int64_t end = begin + chunk + (static_cast<int64_t>(t) < remainder ? 1 : 0);
-    threads[t - 1] = std::thread(worker, t, begin, end);
+  for (int ti = 1; ti < num_threads; ti++) {
+    int64_t begin = (ti * chunk) + std::min(static_cast<int64_t>(ti), remainder);
+    int64_t end = begin + chunk + (static_cast<int64_t>(ti) < remainder ? 1 : 0);
+    threads[ti - 1] = std::thread([&, ti, begin, end]() { partial_sums[ti] = ComputePartialSum(begin, end); });
   }
 
-  int64_t begin0 = 0;
-  int64_t end0 = chunk + (remainder > 0 ? 1 : 0);
-  worker(0, begin0, end0);
+  partial_sums[0] = ComputePartialSum(0, chunk + (remainder > 0 ? 1 : 0));
 
   double sum = partial_sums[0];
-  for (int t = 1; t < num_threads; t++) {
-    threads[t - 1].join();
-    sum += partial_sums[t];
+  for (int ti = 1; ti < num_threads; ti++) {
+    threads[ti - 1].join();
+    sum += partial_sums[ti];
   }
 
   GetOutput() = sum * volume_;

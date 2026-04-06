@@ -21,6 +21,8 @@ class BortsovaAIntegralsRectangleSTL : public BaseTask {
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 
+  double ComputePartialSum(int64_t begin, int64_t end);
+
   Function func_;
   int dims_ = 0;
   int num_steps_ = 0;
