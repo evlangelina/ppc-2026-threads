@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmake --build build --parallel --target bortsova_a_integrals_rectangle_tbb)",
+      "Bash(cmake -S . -B build)",
+      "Bash(./build/bin/ppc_func_tests.exe --gtest_filter=\"*bortsova_a_integrals_rectangle*\")",
+      "Bash(./build/bin/ppc_perf_tests.exe --gtest_filter=\"*bortsova_a_integrals_rectangle*\")",
+      "Bash(PPC_NUM_THREADS=4 ./build/bin/ppc_perf_tests.exe --gtest_filter=\"*bortsova_a_integrals_rectangle*tbb*\")"
+    ]
+  }
+}
