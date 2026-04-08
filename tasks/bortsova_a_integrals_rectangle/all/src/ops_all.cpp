@@ -93,10 +93,7 @@ bool BortsovaAIntegralsRectangleALL::RunImpl() {
 
 #pragma omp parallel num_threads(num_threads) default(none) shared(thread_sums, mpi_begin, local_count, num_threads)
   {
-    int tid = 0;
-#pragma omp master
-    tid = 0;
-    tid = omp_get_thread_num();
+    int tid = omp_get_thread_num();
     int64_t th_chunk = local_count / num_threads;
     int64_t th_rem = local_count % num_threads;
     int64_t th_begin = mpi_begin + (tid * th_chunk) + std::min(static_cast<int64_t>(tid), th_rem);
